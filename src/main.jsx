@@ -7,8 +7,9 @@ import Panier from './usereducer/panier.jsx'
 import Compteur from "./usereducer/CompteurUseReducer.jsx";
 import Formulaire from './usereducer/Form.jsx';
 import ShoppingCart from './usereducer/ShoppingCart.jsx';
+import TodoApp from './usereducer/TodoList.jsx';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ShoppingCart />
+    <TodoApp />
   </StrictMode>,
 )

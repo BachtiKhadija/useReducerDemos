@@ -1,263 +1,164 @@
-import { useReducer } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
+import React, { useReducer, useEffect, useState } from 'react';
 
-// ==========================
-// État initial
-// ==========================
 
+// 1. État initial du reducer
 const initialState = {
-  tasks: []
+  todos: [],
+  loading: true,
+  error: null
 };
 
-// ==========================
-// Reducer
-// ==========================
 
-function reducer(state, action) {
+const todoReducer = (state, action) => {//action={type,payload}
   switch (action.type) {
-
-    // Ajouter une tâche
-    case "ADD_TASK":
+    case 'FETCH_SUCCESS':
       return {
         ...state,
-        tasks: [
-          ...state.tasks,
-          {
-            id: Date.now(),
-            title: action.payload,
-            completed: false
-          }
-        ]
+        loading: false,
+        todos: action.payload,
+        error: null
       };
-
-    // Terminer / réactiver une tâche
-    case "TOGGLE_TASK":
+    case 'FETCH_ERROR':
       return {
         ...state,
-        tasks: state.tasks.map(task =>
-          task.id === action.payload
-            ? {
-                ...task,
-                completed: !task.completed
-              }
-            : task
+        loading: false,
+        error: 'Erreur lors du chargement des tâches'
+      };
+    case 'ADD_TODO':
+      return {
+        ...state,
+        todos: [...state.todos,{id:Date.now(), title: action.payload, completed: false}]
+      };
+    case 'TOGGLE_TODO':
+      return {
+        ...state,
+        todos: state.todos.map(todo =>
+          todo.id === action.payload
+            ? { ...todo, completed: !todo.completed }
+            : todo
         )
       };
-
-    // Supprimer une tâche
-    case "DELETE_TASK":
+    case 'DELETE_TODO':
       return {
         ...state,
-        tasks: state.tasks.filter(
-          task => task.id !== action.payload
-        )
+        todos: state.todos.filter(todo => todo.id !== action.payload)
       };
-
-    // Supprimer toutes les tâches terminées
-    case "CLEAR_COMPLETED":
-      return {
-        ...state,
-        tasks: state.tasks.filter(
-          task => !task.completed
-        )
-      };
-
     default:
       return state;
   }
 }
 
-// ==========================
-// Application
-// ==========================
+//créer le composant TodoApp
+ const TodoApp = () => {
+  // Initialisation de useReducer
+  const [state, dispatch] = useReducer(todoReducer, initialState);
+  const [newTodoText, setNewTodoText] = useState('');
 
-function App() {
+  // 3. useEffect pour récupérer les données de l'API
+  useEffect(() => {
+        fetch('https://jsonplaceholder.typicode.com/todos?_limit=5').then(response => response.json()).then(data => {
+          dispatch({ type: 'FETCH_SUCCESS', payload: data });
+        }).catch(err => {
+          dispatch({ type: 'FETCH_ERROR' });
+        });
 
-  const [state, dispatch] = useReducer(
-    reducer,
-    initialState
-  );
 
-  const addTask = (e) => {
+  
+  }, []);
+
+  // Handler pour l'ajout d'une tâche
+  const handleAddTodo = (e) => {
     e.preventDefault();
+    if (newTodoText.trim() === '') return;
 
-    const title = e.target.task.value.trim();
+    /*const newTodo = {
+      id: Date.now(), // ID unique temporaire
+      title: newTodoText,
+      completed: false
+    };*/
 
-    if (!title) return;
-
-    dispatch({
-      type: "ADD_TASK",
-      payload: title
-    });
-
-    e.target.reset();
+    dispatch({ type: 'ADD_TODO', payload: newTodoText });
+    setNewTodoText('');
   };
 
   return (
-    <div className="container py-5">
-
-      <div className="row justify-content-center">
-
-        <div className="col-md-8">
-
-          {/* Titre */}
-
-          <div className="text-center mb-4">
-
-            <h1 className="fw-bold">
-              Todo List
-            </h1>
-
-            <p className="text-muted">
-              Gestion des tâches avec useReducer
-            </p>
-
-          </div>
-
-          {/* Formulaire */}
-
-          <form
-            onSubmit={addTask}
-            className="d-flex gap-2 mb-4"
-          >
-
-            <input
-              type="text"
-              name="task"
-              className="form-control"
-              placeholder="Ajouter une tâche..."
-            />
-
-            <button
-              type="submit"
-              className="btn btn-primary"
-            >
-              Ajouter
-            </button>
-
+    <div className="container mt-5" style={{ maxWidth: '600px' }}>
+      <div className="card shadow-sm">
+        <div className="card-header bg-primary text-white text-center">
+          <h2>Ma Liste de Tâches</h2>
+        </div>
+        
+        <div className="card-body">
+          {/* Formulaire d'ajout */}
+          <form onSubmit={handleAddTodo} className="mb-4">
+            <div className="mb-3  d-flex">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Ajouter une nouvelle tâche..."
+                value={newTodoText}
+                onChange={(e) => setNewTodoText(e.target.value)}
+              />
+              <button className="btn btn-primary" >
+                Ajouter
+              </button>
+            </div>
           </form>
 
-          {/* Nombre de tâches */}
-
-          <div className="alert alert-info">
-
-            <strong>
-              {state.tasks.length}
-            </strong>{" "}
-            tâche(s)
-
-          </div>
-
-          {/* Liste des tâches */}
-
-          <div className="card shadow-sm">
-
-            <div className="card-body">
-
-              {state.tasks.length === 0 ? (
-
-                <div className="text-center py-4">
-
-                  <p className="text-muted mb-0">
-                    Aucune tâche pour le moment.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                state.tasks.map(task => (
-
-                  <div
-                    key={task.id}
-                    className="d-flex justify-content-between align-items-center border-bottom py-3"
-                  >
-
-                    {/* Nom de la tâche */}
-
-                    <div>
-
-                      <span
-                        className={
-                          task.completed
-                            ? "text-decoration-line-through text-muted"
-                            : ""
-                        }
-                      >
-                        {task.title}
-                      </span>
-
-                    </div>
-
-                    {/* Boutons */}
-
-                    <div className="d-flex gap-2">
-
-                      <button
-                        className={
-                          task.completed
-                            ? "btn btn-warning btn-sm"
-                            : "btn btn-success btn-sm"
-                        }
-                        onClick={() =>
-                          dispatch({
-                            type: "TOGGLE_TASK",
-                            payload: task.id
-                          })
-                        }
-                      >
-                        {task.completed
-                          ? "Réactiver"
-                          : "Terminer"}
-                      </button>
-
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() =>
-                          dispatch({
-                            type: "DELETE_TASK",
-                            payload: task.id
-                          })
-                        }
-                      >
-                        Supprimer
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                ))
-
-              )}
-
+          {/* Affichage du chargement ou de l'erreur */}
+          {state.loading && (
+            <div className="text-center my-3">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Chargement...</span>
+              </div>
             </div>
-
-          </div>
-
-          {/* Supprimer les tâches terminées */}
-
-          {state.tasks.some(task => task.completed) && (
-
-            <button
-              className="btn btn-outline-danger w-100 mt-3"
-              onClick={() =>
-                dispatch({
-                  type: "CLEAR_COMPLETED"
-                })
-              }
-            >
-              Supprimer les tâches terminées
-            </button>
-
           )}
 
+          {state.error && (
+            <div className="alert alert-danger" role="alert">
+              {state.error}
+            </div>
+          )}
+
+          {/* Liste des tâches */}
+          {!state.loading && !state.error && (
+            <ul className="list-group">
+              {state.todos.length === 0 ? (
+                <li className="list-group-item text-center text-muted">
+                  Aucune tâche disponible.
+                </li>
+              ) : (
+                state.todos.map((todo) => (
+                  <li
+                    key={todo.id}
+                    className={`list-group-item d-flex justify-content-between align-items-center ${
+                      todo.completed ? 'list-group-item-light' : ''
+                    }`}
+                  >
+                    <span
+                      onClick={() => dispatch({ type: 'TOGGLE_TODO', payload: todo.id })}
+                      style={{
+          
+                        textDecoration: todo.completed ? 'line-through' : 'none',
+                        color: todo.completed ? '#6c757d' : '#000'
+                      }}
+                    >
+                      {todo.title}
+                    </span>
+                    <button  type="button"
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => dispatch({ type: 'DELETE_TODO', payload: todo.id })}
+                    >
+                      Supprimer
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
         </div>
-
       </div>
-
     </div>
   );
 }
-
-export default App;
+export default TodoApp;
